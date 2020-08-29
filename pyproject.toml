@@ -6,8 +6,8 @@ authors = ["maxwells-daemons <aidanswope@gmail.com>"]
 maintainers = ["maxwells-daemons <aidanswope@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "TODO"
-repository = "TODO"
+homepage = "https://github.com/maxwells-daemons/argsearch"
+repository = "https://github.com/maxwells-daemons/argsearch"
 keywords = ["search", "cli"]
 classifiers = [
     "Environment :: Console",
