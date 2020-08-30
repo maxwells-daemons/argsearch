@@ -1,6 +1,6 @@
 # argsearch
-`argsearch` is a simple and composable tool for running random searches and grid searches on the arguments of any command-line program.
-It runs the same command many times, with any "templates" replaced with values from the search, and outputs the results in JSON.
+`argsearch` is a simple and composable tool for running the same command many times with different combinations of arguments.
+It aims to make random search and grid search easy for things like hyperparameter tuning and setting simulation parameters, while only requiring that your program accepts command line arguments in some form.
 
 ## Example
 ```
@@ -18,12 +18,12 @@ $ argsearch 'echo {a} {b}' grid 3 --a 0.0 1.5 --b X Y
 ## Usage
 
 `argsearch` takes 4 kinds of arguments:
- - A **command string** with **templates** designated by a name in brackets (e.g. `'python my_script --flag {value}'`.
+ - A **command string** with **templates** designated by bracketed names (e.g. `'python my_script.py --flag {value}'`.
  - A **search strategy** (*random* or *grid*).
  -  A number N defining the **search extent** (for random search, the number of trials to make; for grid search, the number of intervals to divide each range into).
  -  A **range** for each template in the command string (e.g. `--value 1 100`).
 
-Then, `argsearch` runs the command string many times, each time replacing the templates with values from their associated ranges.
+Then, `argsearch` runs the command string several times, each time replacing the templates with values from their associated ranges.
 
 ### Ranges
 3 kinds of ranges are supported:
