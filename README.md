@@ -15,6 +15,12 @@ $ argsearch 'echo {a} {b}' grid 3 --a 0.0 1.5 --b X Y
 ]
 ```
 
+## Installation
+
+```
+pip install argsearch
+```
+
 ## Usage
 
 `argsearch` takes 4 kinds of arguments:
