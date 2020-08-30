@@ -164,8 +164,13 @@ def run_templated_command(command: str, args: Dict[str, str]) -> Dict[str, Any]:
     """
     for template, value in args.items():
         command = command.replace("{" + template + "}", value)
+
     command_result = subprocess.run(
-        command, capture_output=True, shell=True, encoding="utf-8"
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        encoding="utf-8",
     )
 
     return {
