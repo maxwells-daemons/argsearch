@@ -10,7 +10,6 @@ import json
 import os
 import random
 import re
-import shlex
 import subprocess
 from typing import Any, Dict, List
 
@@ -165,9 +164,8 @@ def run_templated_command(command: str, args: Dict[str, str]) -> Dict[str, Any]:
     """
     for template, value in args.items():
         command = command.replace("{" + template + "}", value)
-    command_tokens = shlex.split(command)
     command_result = subprocess.run(
-        command_tokens, capture_output=True, encoding="utf-8"
+        command, capture_output=True, shell=True, encoding="utf-8"
     )
 
     return {
