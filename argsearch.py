@@ -317,8 +317,6 @@ def main():
 
         ranges = parse_range_args(base_args.ranges, templates)
 
-    print(base_args.strategy)
-
     print("[")
     if base_args.strategy == "random":
         for i in range(base_args.trials):
