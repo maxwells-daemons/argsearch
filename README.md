@@ -4,7 +4,7 @@ It aims to make random search and grid search easy for things like hyperparamete
 
 ## Example
 ```
-$ argsearch 'echo {a} {b}' grid 3 --a 0.0 1.5 --b X Y
+$ argsearch grid 3 'echo {a} {b}' --a 0.0 1.5 --b X Y
 [
 {"args": {"a": "0.0", "b": "X"}, "command": "echo 0.0 X", "stdout": "0.0 X\n", "stderr": "", "returncode": 0},
 {"args": {"a": "0.0", "b": "Y"}, "command": "echo 0.0 Y", "stdout": "0.0 Y\n", "stderr": "", "returncode": 0},
@@ -23,21 +23,32 @@ pip install argsearch
 
 ## Usage
 
-`argsearch` takes 4 kinds of arguments:
+`argsearch` takes 3 kinds of arguments:
+ - A **search strategy** (*random,* *grid,* or *repeat*) and its configuration:
+    - For *random*: **trials**, the number of random trials to run.
+    - For *grid*: **divisions**, the number of points to try in each numeric range.
+    - For *repeat*: **repeats**, the number of times to repeat the command.
  - A **command string** with **templates** designated by bracketed names (e.g. `'python my_script.py --flag {value}'`.
- - A **search strategy** (*random* or *grid*).
- -  A number N defining the **search extent** (for random search, the number of trials to make; for grid search, the number of intervals to divide each range into).
  -  A **range** for each template in the command string (e.g. `--value 1 100`).
 
 Then, `argsearch` runs the command string several times, each time replacing the templates with values from their associated ranges.
+Note that the *repeat* strategy does not admit templates or range arguments.
+
+### Search Strategies
+
+Three search strategies are currently implemented:
+ - **Random search** samples uniformly randomly from specified ranges for a fixed number
+     of trials.
+ - **Grid search** divides each numeric range into a fixed number of
+     evenly-spaced points and runs once for each possible combination of
+     inputs.
+ - **Repeat** runs the same command a fixed number of times.
 
 ### Ranges
-3 kinds of ranges are supported:
- - Float ranges are specified by a minimum and maximum floating-point value (e.g. `--value 0.0 1.0`).
- - Integer ranges are specified by a minimum and maximum integer (e.g. `--value 1 100`). Integer ranges are guaranteed to only yield integer values.
- - Categorical ranges are specified by a list of non-numeric categories, or more than two numbers (e.g. `--value A B C`, `--value 2 4 8 16`). Categorical ranges only draw values from the listed categories, and are not divided up during a grid search.
-
-Note that values are sampled uniformly, so if you think of your range as log-uniform this sampling behavior may not work well.
+Three types of ranges are available:
+ - **Floating-point ranges** are specified by a minimum and maximum floating-point value (e.g. `--value 0.0 1.0`).
+ - **Integer ranges** are specified by a minimum and maximum integer (e.g. `--value 1 100`). Integer ranges are guaranteed to only yield integer values.
+ - **Categorical ranges** are specified by a list of non-numeric categories, or more than two numbers (e.g. `--value A B C`, `--value 2 4 8 16`). Categorical ranges only draw values from the listed categories, and are not divided up during a grid search.
 
 ### Output
 

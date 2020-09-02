@@ -112,7 +112,7 @@ class TemplateRange(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
         if len(values) < 2:
             raise argparse.ArgumentTypeError(
-                "a template range requires 2 or more values"
+                "A template range requires 2 or more values."
             )
 
         if len(values) == 2:
@@ -142,8 +142,57 @@ class TemplateRange(argparse.Action):
 def positive_int(arg: str) -> int:
     value = int(arg)
     if value < 1:
-        raise argparse.ArgumentTypeError("N must be a positive integer")
+        raise argparse.ArgumentTypeError("Value must be a positive integer.")
     return value
+
+
+def get_template_names(command_string: str) -> List[str]:
+    """
+    Get the names of all of the bracketed templates in a command string.
+
+    Parameters
+    ----------
+    command_string
+        The string to read templates from.
+
+    Returns
+    -------
+    List[str]
+        A list of the templates in the command string, without brackets.
+    """
+    templates = re.findall("\{.+?\}", command_string)
+    names = [template.strip("{}") for template in templates]
+    return names
+
+
+def run_command(command: str) -> Dict[str, Any]:
+    """
+    Run a command without templates, capturing and formatting any output.
+
+    Parameters
+    ----------
+    command
+        The command string to run. Tokenized with the shell defaults.
+
+    Returns
+    -------
+    Dict[str, str]
+        The results of evaluating the command with substitution.
+    """
+    command_result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        encoding="utf-8",
+    )
+
+    return {
+        "command": command,
+        "stdout": command_result.stdout,
+        "stderr": command_result.stderr,
+        "returncode": command_result.returncode,
+    }
 
 
 def run_templated_command(command: str, args: Dict[str, str]) -> Dict[str, Any]:
@@ -165,90 +214,135 @@ def run_templated_command(command: str, args: Dict[str, str]) -> Dict[str, Any]:
     for template, value in args.items():
         command = command.replace("{" + template + "}", value)
 
-    command_result = subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=True,
-        encoding="utf-8",
-    )
+    results = run_command(command)
+    return {"args": args, **results}
 
-    return {
-        "args": args,
-        "command": command,
-        "stdout": command_result.stdout,
-        "stderr": command_result.stderr,
-        "returncode": command_result.returncode,
-    }
+
+def parse_range_args(range_args: List[str], templates: List[str]) -> Dict[str, Range]:
+    """
+    Parse the provided range arguments into Range objects.
+
+    Parameters
+    ----------
+    range_args
+        A list of range arguments provided on the command line.
+    templates
+        A list of template names to be filled in the command string.
+
+    Returns
+    -------
+    Dict[str, Range]
+        A mapping from template names to their specified ranges.
+    """
+    usage = "..."
+    for template in templates:
+        usage += f" --{template} (low high | A B C [D ...])"
+
+    range_parser = argparse.ArgumentParser(
+        "ranges",
+        description="One range specifier per template in the input command. "
+        "If two numbers (int or float) are provided, they are treated as the min and "
+        "max of a numeric range. Otherwise, they are treated as separate categories.",
+        add_help=True,
+        usage=usage,
+        allow_abbrev=False,
+    )
+    range_group = range_parser.add_argument_group("templates specified")
+
+    try:
+        for template in templates:
+            range_group.add_argument(
+                f"--{template}", action=TemplateRange, nargs="*", required=True,
+            )
+        ranges = range_parser.parse_args(range_args)
+    except SystemExit:
+        os._exit(2)
+
+    return vars(ranges)
 
 
 def main():
     base_parser = argparse.ArgumentParser(
         description="Run the same command multiple times with different values for its "
-        'arguments. For example, `argsearch "echo {a}" random 10 --a 1 100`.',
+        "arguments.",
     )
-    base_parser.add_argument(
-        "command", help="the command to run, including at least one bracketed template"
+
+    strategy_parsers = base_parser.add_subparsers(
+        title="strategy", description="the search strategy to use"
     )
-    base_parser.add_argument(
-        "strategy", choices=["random", "grid"], help="the search strategy to use"
+
+    random_parser = strategy_parsers.add_parser("random", help="random search")
+    random_parser.add_argument(
+        "trials", type=positive_int, help="number of random trials to run"
     )
-    base_parser.add_argument(
-        "N",
+    random_parser.set_defaults(strategy="random")
+
+    grid_parser = strategy_parsers.add_parser("grid", help="grid search")
+    grid_parser.add_argument(
+        "divisions",
         type=positive_int,
-        help="in a random search, the number of trials to run; in a grid search, the "
-        "number of divisions for each numeric range",
+        help="number of ways to divide each numeric interval",
     )
-    base_parser.add_argument(
-        "template_ranges",
-        nargs=argparse.REMAINDER,
-        help="a numeric or categorical range for each template in the command",
+    grid_parser.set_defaults(strategy="grid")
+
+    repeat_parser = strategy_parsers.add_parser("repeat", help="repeat a command")
+    repeat_parser.add_argument(
+        "repeats", type=positive_int, help="number of repeats to run"
     )
+    repeat_parser.set_defaults(strategy="repeat")
+    repeat_parser.add_argument(
+        "command", help="the command to run",
+    )
+
+    for subparser in [random_parser, grid_parser]:
+        subparser.add_argument(
+            "command",
+            help="the command to run, including at least one bracketed template",
+        )
+        subparser.add_argument(
+            "ranges",
+            nargs=argparse.REMAINDER,
+            help="a numeric or categorical range for each template in the command",
+        )
+
     base_args = base_parser.parse_args()
+    templates = get_template_names(base_args.command)
 
-    templates = re.findall("\{.+?\}", base_args.command)
-    if not templates:
-        raise ValueError("At least one argument template must be provided.")
-
-    template_range_parser = argparse.ArgumentParser(
-        "template_ranges",
-        description="One range specifier per template in the input command. "
-        "If two numbers (int or float) are provided, they are treated as the min and "
-        "max of a numeric range. Otherwise, they are treated as separate categories.",
-        add_help=True,
-        usage="... --arg min max | --arg A B C [D ...]",
-        allow_abbrev=False,
-    )
-    range_group = template_range_parser.add_argument_group("templates specified")
-
-    try:
-        for template in templates:
-            range_group.add_argument(
-                f"--{template.strip('{}')}",
-                action=TemplateRange,
-                nargs="*",
-                required=True,
+    if base_args.strategy != "repeat":
+        if not templates:
+            raise ValueError(
+                "At least one template must be provided with the "
+                f"'{base_args.strategy}' strategy."
             )
-        range_args = template_range_parser.parse_args(base_args.template_ranges)
-    except SystemExit:
-        os._exit(2)
+
+        ranges = parse_range_args(base_args.ranges, templates)
+
+    print(base_args.strategy)
 
     print("[")
     if base_args.strategy == "random":
-        for i in range(base_args.N):
-            args = {k: v.random_sample() for k, v in vars(range_args).items()}
+        for i in range(base_args.trials):
+            args = {k: v.random_sample() for k, v in ranges.items()}
             result = run_templated_command(base_args.command, args)
-            suffix = ",\n" if i < base_args.N - 1 else "\n"
+            suffix = ",\n" if i < base_args.trials - 1 else "\n"
             print(json.dumps(result), end=suffix)
-    else:
-        arg_names, ranges = zip(*vars(range_args).items())
-        grids = [r.grid(base_args.N) for r in ranges]
+    elif base_args.strategy == "grid":
+        arg_names, ranges = zip(*ranges.items())
+        grids = [r.grid(base_args.divisions) for r in ranges]
         combinations = list(itertools.product(*grids))
+
         for i, arg_values in enumerate(combinations):
             args = dict(zip(arg_names, arg_values))
             result = run_templated_command(base_args.command, args)
             suffix = ",\n" if i < len(combinations) - 1 else "\n"
             print(json.dumps(result), end=suffix)
+    elif base_args.strategy == "repeat":
+        for i in range(base_args.repeats):
+            result = run_command(base_args.command)
+            suffix = ",\n" if i < base_args.repeats - 1 else "\n"
+            print(json.dumps(result), end=suffix)
+    else:
+        assert False
     print("]")
 
 
