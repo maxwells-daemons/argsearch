@@ -11,7 +11,7 @@ import os
 import random
 import re
 import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 import numpy as np
 
@@ -146,7 +146,7 @@ def positive_int(arg: str) -> int:
     return value
 
 
-def get_template_names(command_string: str) -> List[str]:
+def get_template_names(command_string: str) -> Set[str]:
     """
     Get the names of all of the bracketed templates in a command string.
 
@@ -161,7 +161,7 @@ def get_template_names(command_string: str) -> List[str]:
         A list of the templates in the command string, without brackets.
     """
     templates = re.findall("\{.+?\}", command_string)
-    names = [template.strip("{}") for template in templates]
+    names = {template.strip("{}") for template in templates}
     return names
 
 
@@ -218,7 +218,7 @@ def run_templated_command(command: str, args: Dict[str, str]) -> Dict[str, Any]:
     return {"args": args, **results}
 
 
-def parse_range_args(range_args: List[str], templates: List[str]) -> Dict[str, Range]:
+def parse_range_args(range_args: List[str], templates: Set[str]) -> Dict[str, Range]:
     """
     Parse the provided range arguments into Range objects.
 
