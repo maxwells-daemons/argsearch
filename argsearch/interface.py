@@ -104,11 +104,11 @@ def main():
     )
 
     strategy_parsers = base_parser.add_subparsers(
-        title="strategy",
-        description="the search strategy to use",
-        dest="strategy",
-        required=True,
+        title="strategy", description="the search strategy to use", dest="strategy",
     )
+    # Workaround for older Python versions; see
+    # https://stackoverflow.com/questions/23349349/argparse-with-required-subparser
+    strategy_parsers.required = True
 
     random_parser = strategy_parsers.add_parser("random", help="random search")
     random_parser.add_argument(

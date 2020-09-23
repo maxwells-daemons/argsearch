@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "argsearch"
-version = "0.1.1"
+version = "0.2.1"
 description = "Run a command many times with different combinations of its inputs."
 authors = ["Aidan Swope <aidanswope@gmail.com>"]
 maintainers = ["Aidan Swope <aidanswope@gmail.com>"]
@@ -31,4 +31,3 @@ argsearch = "argsearch:main"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
-
