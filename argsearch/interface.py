@@ -91,7 +91,7 @@ def main():
         type=positive_int,
         default=0,
         metavar="N",
-        help="if provided, split work among N worker processes; implies --output-json",
+        help="if provided, split work among N worker processes",
     )
     base_parser.add_argument(
         "--output-json",

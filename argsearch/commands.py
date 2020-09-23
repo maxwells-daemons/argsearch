@@ -5,9 +5,14 @@ Functions to run user commands.
 import json
 import multiprocessing
 import subprocess
+import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 from tqdm import tqdm
+
+
+def format_header(step: int, command: str):
+    return f"--- [{step}] {command}"
 
 
 def stream_command(command: str, step: int, monitor: tqdm) -> None:
@@ -23,7 +28,7 @@ def stream_command(command: str, step: int, monitor: tqdm) -> None:
     monitor
         A handle to the parent progress bar.
     """
-    monitor.write(f"--- [{step}] {command}")
+    monitor.write(format_header(step, command))
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, encoding="utf-8",
     )
@@ -94,7 +99,6 @@ def run_commands(
         Otherwise (default), stream output to stdout as it arrives.
     num_workers
         If provided, use this many worker processes to run commands.
-        Implies output_json.
     disable_bar
         If True, disable the progress bar.
     """
@@ -105,15 +109,28 @@ def run_commands(
 
         with tqdm(total=len(command_strings), disable=disable_bar) as monitor:
             args_packed = [(comm, i, None) for i, comm in enumerate(command_strings)]
-            outputs = []
+
+            if output_json:
+                outputs = []
+
             for output in process_pool.imap_unordered(
                 _capture_command_packed, args_packed
             ):
                 monitor.update()
-                outputs.append(output)
 
-            formatted = json.dumps(outputs)
-            monitor.write(formatted)
+                if output_json:
+                    outputs.append(output)
+                else:
+                    header = format_header(output["step"], output["command"])
+                    output_with_header = f'{header}\n{output["stdout"]}'
+                    monitor.write(output_with_header, end="")
+                    if output["stderr"]:
+                        sys.stderr.write(output["stderr"])
+                        sys.stderr.flush()
+
+            if output_json:
+                formatted = json.dumps(outputs)
+                monitor.write(formatted)
 
         return
 
