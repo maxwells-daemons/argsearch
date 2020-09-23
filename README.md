@@ -15,18 +15,18 @@ Key features include:
 ### Basic usage
 ```
 $ argsearch grid 3 "echo {a} {b}" --a 1 10 --b X Y
---- [0] echo 1 X                                                                                                     
-1 X                                                                                                                  
---- [1] echo 5 X                                                                                                     
-5 X                                                                                                                  
---- [2] echo 10 X                                                                                                    
-10 X                                                                                                                 
---- [3] echo 1 Y                                                                                                     
-1 Y                                                                                                                  
---- [4] echo 5 Y                                                                                                     
-5 Y                                                                                                                  
---- [5] echo 10 Y                                                                                                    
-10 Y                                                                                                                   
+--- [0] echo 1 X
+1 X
+--- [1] echo 5 X
+5 X
+--- [2] echo 10 X
+10 X
+--- [3] echo 1 Y
+1 Y
+--- [4] echo 5 Y
+5 Y
+--- [5] echo 10 Y
+10 Y
 100%|██████████████████████████████| 6/6 [00:00<00:00, 220.49it/s]
 ```
 ### Composing pipelines with `argsearch` and `jq`
