@@ -3,12 +3,9 @@ Contains the main interface, used to parse arguments and run the program.
 """
 
 import argparse
-import json
 import os
 import re
-from typing import Any, Dict, List, Set
-
-from tqdm import tqdm
+from typing import Dict, List, Set
 
 from argsearch import commands, ranges, strategies
 
@@ -89,18 +86,28 @@ def main():
         description="Run the same command multiple times with different values for its "
         "arguments.",
     )
-
+    base_parser.add_argument(
+        "--num-workers",
+        type=positive_int,
+        default=0,
+        metavar="N",
+        help="if provided, split work among N worker processes; implies --output-json",
+    )
     base_parser.add_argument(
         "--output-json",
         action="store_true",
         help="capture output and format it as JSON instead of streaming to terminal",
     )
+
     base_parser.add_argument(
         "--disable-bar", action="store_true", help="disable the progress bar"
     )
 
     strategy_parsers = base_parser.add_subparsers(
-        title="strategy", description="the search strategy to use"
+        title="strategy",
+        description="the search strategy to use",
+        dest="strategy",
+        required=True,
     )
 
     random_parser = strategy_parsers.add_parser("random", help="random search")
@@ -122,9 +129,7 @@ def main():
         "repeats", type=positive_int, help="number of repeats to run"
     )
     repeat_parser.set_defaults(strategy="repeat")
-    repeat_parser.add_argument(
-        "command", help="the command to run",
-    )
+    repeat_parser.add_argument("command", help="the command to run")
 
     for subparser in [random_parser, grid_parser]:
         subparser.add_argument(
@@ -161,14 +166,9 @@ def main():
     else:
         raise ValueError(f"Unrecognized strategy: {base_args.strategy}.")
 
-    with tqdm(command_strings, disable=base_args.disable_bar) as monitor:
-        if base_args.output_json:
-            outputs = [
-                commands.capture_command(command, step, monitor)
-                for step, command in enumerate(monitor)
-            ]
-            formatted = json.dumps(outputs)
-            monitor.write(formatted)
-        else:
-            for step, command in enumerate(monitor):
-                commands.stream_command(command, step, monitor)
+    commands.run_commands(
+        command_strings,
+        base_args.output_json,
+        base_args.num_workers,
+        base_args.disable_bar,
+    )

@@ -2,8 +2,10 @@
 Functions to run user commands.
 """
 
+import json
+import multiprocessing
 import subprocess
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Tuple
 
 from tqdm import tqdm
 
@@ -33,7 +35,7 @@ def stream_command(command: str, step: int, monitor: tqdm) -> None:
     process.wait()
 
 
-def capture_command(command: str, step: int, monitor: tqdm) -> Dict[str, Any]:
+def capture_command(command: str, step: int, monitor: Optional[tqdm]) -> Dict[str, Any]:
     """
     Run a command string, capturing and formatting any output.
 
@@ -44,14 +46,15 @@ def capture_command(command: str, step: int, monitor: tqdm) -> Dict[str, Any]:
     step
         Which step of the search we're on.
     monitor
-        A handle to the parent progress bar.
+        An optional handle to the parent progress bar.
 
     Returns
     -------
     Dict[str, str]
         The results of evaluating the command with substitution.
     """
-    monitor.set_description(command)
+    if monitor:
+        monitor.set_description(command)
     command_result = subprocess.run(
         command,
         stdout=subprocess.PIPE,
@@ -67,3 +70,61 @@ def capture_command(command: str, step: int, monitor: tqdm) -> Dict[str, Any]:
         "stderr": command_result.stderr,
         "returncode": command_result.returncode,
     }
+
+
+def _capture_command_packed(args: Tuple[str, int, tqdm]) -> Dict[str, Any]:
+    return capture_command(*args)
+
+
+def run_commands(
+    command_strings: List[str],
+    output_json: bool = False,
+    num_workers: int = 0,
+    disable_bar: bool = False,
+) -> None:
+    """
+    Run a list of command strings, streaming or formatting the output.
+
+    Parameters
+    ----------
+    command_strings
+        All command strings to run.
+    output_json
+        If True, collect output and print at the end, formatted as json.
+        Otherwise (default), stream output to stdout as it arrives.
+    num_workers
+        If provided, use this many worker processes to run commands.
+        Implies output_json.
+    disable_bar
+        If True, disable the progress bar.
+    """
+    if num_workers > 0:
+        process_pool = multiprocessing.Pool(
+            num_workers, initializer=tqdm.set_lock, initargs=(tqdm.get_lock(),)
+        )
+
+        with tqdm(total=len(command_strings), disable=disable_bar) as monitor:
+            args_packed = [(comm, i, None) for i, comm in enumerate(command_strings)]
+            outputs = []
+            for output in process_pool.imap_unordered(
+                _capture_command_packed, args_packed
+            ):
+                monitor.update()
+                outputs.append(output)
+
+            formatted = json.dumps(outputs)
+            monitor.write(formatted)
+
+        return
+
+    with tqdm(command_strings, disable=disable_bar) as monitor:
+        if output_json:
+            outputs = [
+                capture_command(command, step, monitor)
+                for step, command in enumerate(monitor)
+            ]
+            formatted = json.dumps(outputs)
+            monitor.write(formatted)
+        else:
+            for step, command in enumerate(monitor):
+                stream_command(command, step, monitor)
