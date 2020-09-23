@@ -67,9 +67,9 @@ pip install argsearch
 
 `argsearch` has 3 mandatory arguments:
  - A **search strategy** (`random`, `grid`, or `repeat`) and its configuration:
-    - For `random`: **trials**, the number of random trials to run.
-    - For `grid`: **divisions**, the number of points to try in each numeric range.
-    - For `repeat`: **repeats**, the number of times to repeat the command.
+    - For `random`: the number of random trials to run.
+    - For `grid`: the number of points to try in each numeric range.
+    - For `repeat`: the number of times to repeat the command.
  - A **command string** with **templates** designated by bracketed names (e.g. `'python my_script.py --flag {value}'`.
  -  A **range** for each template in the command string (e.g. `--value 1 100`).
 
