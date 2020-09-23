@@ -22,12 +22,13 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.6"
 numpy = "^1.19.1"
+tqdm = "^4.49.0"
 
 [tool.poetry.dev-dependencies]
 
+[tool.poetry.scripts]
+argsearch = "argsearch:main"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
-[tool.poetry.scripts]
-argsearch = "argsearch:main"
