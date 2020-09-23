@@ -5,7 +5,7 @@ It aims to easily automate tasks like hyperparameter tuning and setting simulati
 Key features include:
  - Easy integration with any program that takes command-line arguments.
  - Support for searching over integer, floating-point, and categorical arguments with several search strategies.
- - The ability to produce JSON-structured output, making `argsearch` composable with other command-line tools like [`jq`](https://stedolan.github.io/jq/).
+ - The ability to produce JSON-structured output, making it composable with other command-line tools like [`jq`](https://stedolan.github.io/jq/).
  - Multiprocessing, enabling running many experiments in parallel.
  
 ![MIT license badge](https://img.shields.io/github/license/maxwells-daemons/argsearch)
