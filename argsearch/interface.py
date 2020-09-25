@@ -37,13 +37,14 @@ def parse_range_args(
     """
     usage = "..."
     for template in templates:
-        usage += f" --{template} (low high | A B C [D ...])"
+        usage += f" --{template} ([LOG] low high | A B C [D ...])"
 
     range_parser = argparse.ArgumentParser(
         "ranges",
         description="One range specifier per template in the input command. "
         "If two numbers (int or float) are provided, they are treated as the min and "
-        "max of a numeric range. Otherwise, they are treated as separate categories.",
+        "max of a numeric range. Otherwise, they are treated as separate categories."
+        "If LOG and two numbers are present, they define a log-uniform range.",
         add_help=True,
         usage=usage,
         allow_abbrev=False,
