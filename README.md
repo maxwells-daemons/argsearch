@@ -68,8 +68,8 @@ pip install argsearch
 ## Usage
 
 `argsearch` has 3 mandatory arguments:
- - A **search strategy** (`random`, `grid`, or `repeat`) and its configuration:
-    - For `random`: the number of random trials to run.
+ - A **search strategy** (`random`, `quasirandom`, `grid`, or `repeat`) and its configuration:
+    - For `random` or `quasirandom`: the number of trials to run.
     - For `grid`: the number of points to try in each numeric range.
     - For `repeat`: the number of times to repeat the command.
  - A **command string** with **templates** designated by bracketed names (e.g. `'python my_script.py --flag {value}'`.
@@ -83,8 +83,9 @@ I recommend you single-quote the command string to avoid shell expansion issues.
 ### Search Strategies
 
 The search strategy determines which commands get run by sampling from the ranges.
-Three search strategies are currently implemented:
+Four search strategies are currently implemented:
  - **Random search** samples uniformly randomly from specified ranges for a fixed number of trials.
+ - **Quasirandom search** samples quasi-randomly according to a low-discrepancy [Sobol sequence](https://en.wikipedia.org/wiki/Sobol_sequence). This is recommended over random search in almost all cases because it fills the search space more effectively and avoids redundant experiments.
  - **Grid search** divides each numeric range into a fixed number of evenly-spaced points and runs once for each possible combination of inputs.
  - **Repeat** runs the same command a fixed number of times, and does not accept templates.
 
