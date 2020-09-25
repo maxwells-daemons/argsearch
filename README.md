@@ -51,10 +51,12 @@ $ argsearch --output-json repeat 2 "echo hello" | jq
 ```
 
 ```
-$ argsearch --output-json random 100 "echo {x}" --x 0.0 1.0 | jq -j '.[] | .stdout' | sort -n | tail -n 3
-0.9243826799526542
-0.9780827495319969
-0.9891715845993947
+$ argsearch --output-json random 5 "echo {x}" --x LOG 1e-3 1e3 | jq -j '.[] | .stdout' | sort
+0.00346280772906192
+0.026690253595621032
+0.08766768693592873
+0.24965066831702154
+291.68909574884617
 ```
 
 ## Installation
@@ -90,9 +92,12 @@ Three search strategies are currently implemented:
 
 For each template that appears in the command string, you must provide a range that determines what values may be substituted into the template.
 Three types of ranges are available:
- - **Floating-point ranges** are specified by a minimum and maximum floating-point value (e.g. `--value 0.0 1.0`).
+ - **Floating-point ranges** are specified by a minimum and maximum floating-point value (e.g. `--value 0.0 1e3`).
  - **Integer ranges** are specified by a minimum and maximum integer (e.g. `--value 1 100`). Integer ranges are guaranteed to only yield integer values.
  - **Categorical ranges** are specified by a list of non-numeric categories, or more than two numbers (e.g. `--value A B C`, `--value 2 4 8 16`). Categorical ranges only draw values from the listed categories, and are not divided up during a grid search.
+ 
+Floating-point and integer ranges may be converted to **logarithmic ranges** by specifying `LOG` before their minimum and maximum (e.g. `--value LOG 16 256`).
+These ranges are gridded and sampled log-uniformly instead of uniformly, so that each order of magnitude appears roughly equally often. 
  
 ### Output
 
