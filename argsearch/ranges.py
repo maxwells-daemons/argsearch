@@ -10,6 +10,7 @@ import random
 
 import numpy as np
 from scipy import stats
+import skopt
 
 
 def cast_range_argument(arg: str) -> Union[int, float, str]:
@@ -95,6 +96,10 @@ class Range(abc.ABC):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def to_skopt(self) -> skopt.space.Space:
+        raise NotImplementedError
+
 
 class IntRange(Range):
     """
@@ -117,6 +122,9 @@ class IntRange(Range):
         dynamic_range = self.max_value + 1 - self.min_value
         float_value = uniform_sample * dynamic_range + self.min_value
         return str(int(float_value))
+
+    def to_skopt(self) -> skopt.space.Space:
+        return skopt.space.Integer(self.min_value, self.max_value, prior="uniform")
 
 
 class LogIntRange(Range):
@@ -145,6 +153,11 @@ class LogIntRange(Range):
         float_value = np.exp(log_range * uniform_sample + log_min)
         return str(int(float_value))
 
+    def to_skopt(self) -> skopt.space.Space:
+        return skopt.space.Integer(
+            self.min_value, self.max_value, prior="log-uniform", base=2
+        )
+
 
 class FloatRange(Range):
     """
@@ -166,6 +179,9 @@ class FloatRange(Range):
         dynamic_range = self.max_value - self.min_value
         value = uniform_sample * dynamic_range + self.min_value
         return str(value)
+
+    def to_skopt(self) -> skopt.space.Space:
+        return skopt.space.Real(self.min_value, self.max_value, prior="uniform")
 
 
 class LogFloatRange(Range):
@@ -192,6 +208,9 @@ class LogFloatRange(Range):
         value = np.exp(log_range * uniform_sample + log_min)
         return str(value)
 
+    def to_skopt(self) -> skopt.space.Space:
+        return skopt.space.Real(self.min_value, self.max_value, prior="log-uniform")
+
 
 class CategoricalRange(Range):
     """
@@ -217,6 +236,9 @@ class CategoricalRange(Range):
                 return category
 
         assert False
+
+    def to_skopt(self) -> skopt.space.Space:
+        return skopt.space.Categorical(self.categories)
 
 
 class TemplateRange(argparse.Action):

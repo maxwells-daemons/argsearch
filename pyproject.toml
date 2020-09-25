@@ -25,6 +25,7 @@ numpy = "^1.19.1"
 tqdm = "^4.49.0"
 scipy = "^1.5.2"
 sobol_seq = "^0.2.0"
+scikit-optimize = "^0.8.1"
 
 [tool.poetry.dev-dependencies]
 

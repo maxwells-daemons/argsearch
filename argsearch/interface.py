@@ -7,7 +7,7 @@ import os
 import re
 from typing import Dict, List, Set
 
-from argsearch import commands, ranges, strategies
+from argsearch import commands, optimization, ranges, strategies
 
 
 def positive_int(arg: str) -> int:
@@ -140,7 +140,29 @@ def main():
     repeat_parser.set_defaults(strategy="repeat")
     repeat_parser.add_argument("command", help="the command to run")
 
-    for subparser in [random_parser, quasirandom_parser, grid_parser]:
+    minimize_parser = strategy_parsers.add_parser(
+        "minimize", help="minimize with Bayesian optimization"
+    )
+    minimize_parser.add_argument(
+        "trials", type=positive_int, help="number of trials to make"
+    )
+    minimize_parser.set_defaults(strategy="minimize")
+
+    maximize_parser = strategy_parsers.add_parser(
+        "maximize", help="maximize with Bayesian optimization"
+    )
+    maximize_parser.add_argument(
+        "trials", type=positive_int, help="number of trials to make"
+    )
+    maximize_parser.set_defaults(strategy="maximize")
+
+    for subparser in [
+        random_parser,
+        quasirandom_parser,
+        grid_parser,
+        minimize_parser,
+        maximize_parser,
+    ]:
         subparser.add_argument(
             "command",
             help="the command to run, including at least one bracketed template",
@@ -161,6 +183,30 @@ def main():
                 f"'{base_args.strategy}' strategy."
             )
         parsed_ranges = parse_range_args(base_args.ranges, templates)
+
+    if base_args.strategy == "minimize":
+        optimization.optimize_command(
+            command_template=base_args.command,
+            range_map=parsed_ranges,
+            trials=base_args.trials,
+            maximize=False,
+            output_json=base_args.output_json,
+            num_workers=base_args.num_workers,
+            disable_bar=base_args.disable_bar,
+        )
+        return
+
+    if base_args.strategy == "maximize":
+        optimization.optimize_command(
+            command_template=base_args.command,
+            range_map=parsed_ranges,
+            trials=base_args.trials,
+            maximize=True,
+            output_json=base_args.output_json,
+            num_workers=base_args.num_workers,
+            disable_bar=base_args.disable_bar,
+        )
+        return
 
     if base_args.strategy == "random":
         command_strings = strategies.random(
