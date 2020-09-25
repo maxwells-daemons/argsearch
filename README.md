@@ -1,10 +1,11 @@
 # argsearch
-`argsearch` is a simple and composable tool for running the same command many times with different combinations of arguments.
+`argsearch` is a simple and composable tool for sweeping over the arguments of another program.
 It aims to easily automate tasks like hyperparameter tuning and setting simulation parameters, while only requiring that your program accepts command-line arguments in some form.
 
 Key features include:
  - Easy integration with any program that takes command-line arguments.
  - Support for searching over integer, floating-point, and categorical arguments with several search strategies.
+ - Smart search algorithms, including Bayesian optimization and low-discrepancy random search.
  - The ability to produce JSON-structured output, making it composable with other command-line tools like [`jq`](https://stedolan.github.io/jq/).
  - Multiprocessing, enabling running many experiments in parallel.
  
@@ -59,6 +60,21 @@ $ argsearch --output-json random 5 "echo {x}" --x LOG 1e-3 1e3 | jq -j '.[] | .s
 291.68909574884617
 ```
 
+### Black-box optimization
+```
+$ argsearch maximize 13 "echo {a}" --a 1 1000  | tail
+--- [8] echo 249
+249
+--- [9] echo 116
+116
+--- [10] echo 999
+999
+--- [11] echo 1000
+1000
+--- [12] echo 1000
+1000
+```
+
 ## Installation
 
 ```
@@ -83,11 +99,15 @@ I recommend you single-quote the command string to avoid shell expansion issues.
 ### Search Strategies
 
 The search strategy determines which commands get run by sampling from the ranges.
-Four search strategies are currently implemented:
+The search strategies currently implemented are:
  - **Random search** samples uniformly randomly from specified ranges for a fixed number of trials.
  - **Quasirandom search** samples quasi-randomly according to a low-discrepancy [Sobol sequence](https://en.wikipedia.org/wiki/Sobol_sequence). This is recommended over random search in almost all cases because it fills the search space more effectively and avoids redundant experiments.
  - **Grid search** divides each numeric range into a fixed number of evenly-spaced points and runs once for each possible combination of inputs.
  - **Repeat** runs the same command a fixed number of times, and does not accept templates.
+ - **Minimize** tries to minimize the program's output with [Bayesian black-box optimization](https://en.wikipedia.org/wiki/Bayesian_optimization).
+ - **Maximize** is like minimize, but for maximization.
+ 
+Maximize and minimize both require that your program's last line of stdout is a single number, representing the quantity to optimize.
 
 ### Ranges
 
