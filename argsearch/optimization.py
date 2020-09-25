@@ -98,7 +98,7 @@ def optimize_command(
                     best_objective = min(objective_values)
                     steps_since_improvement = 0
                 else:
-                    steps_since_improvement += num_workers
+                    steps_since_improvement += 1
 
                 monitor.set_postfix(
                     {
