@@ -117,6 +117,14 @@ def main():
     )
     random_parser.set_defaults(strategy="random")
 
+    quasirandom_parser = strategy_parsers.add_parser(
+        "quasirandom", help="low-discrepancy quasirandom search"
+    )
+    quasirandom_parser.add_argument(
+        "trials", type=positive_int, help="number of quasirandom trials to run"
+    )
+    quasirandom_parser.set_defaults(strategy="quasirandom")
+
     grid_parser = strategy_parsers.add_parser("grid", help="grid search")
     grid_parser.add_argument(
         "divisions",
@@ -132,7 +140,7 @@ def main():
     repeat_parser.set_defaults(strategy="repeat")
     repeat_parser.add_argument("command", help="the command to run")
 
-    for subparser in [random_parser, grid_parser]:
+    for subparser in [random_parser, quasirandom_parser, grid_parser]:
         subparser.add_argument(
             "command",
             help="the command to run, including at least one bracketed template",
@@ -156,6 +164,10 @@ def main():
 
     if base_args.strategy == "random":
         command_strings = strategies.random(
+            base_args.command, parsed_ranges, base_args.trials
+        )
+    elif base_args.strategy == "quasirandom":
+        command_strings = strategies.sobol(
             base_args.command, parsed_ranges, base_args.trials
         )
     elif base_args.strategy == "grid":

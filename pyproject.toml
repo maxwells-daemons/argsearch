@@ -24,6 +24,7 @@ python = "^3.6"
 numpy = "^1.19.1"
 tqdm = "^4.49.0"
 scipy = "^1.5.2"
+sobol_seq = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
 

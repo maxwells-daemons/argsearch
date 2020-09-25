@@ -3,8 +3,12 @@ Defines strategies, which sample arguments from Ranges to get command strings to
 """
 
 
+import collections
 import itertools
 from typing import Dict, List
+
+import numpy as np
+import sobol_seq
 
 from argsearch import ranges
 
@@ -59,6 +63,46 @@ def random(
         return command_string
 
     return [random_sample() for _ in range(trials)]
+
+
+def sobol(
+    templated_string: str, range_map: Dict[str, ranges.Range], trials: int
+) -> List[str]:
+    """
+    Get a list of command strings by quasirandom sampling from a Sobol sequence.
+
+    Parameters
+    ----------
+    templated_string
+        A string to be executed as a subprocess, with "{arg}" bracketed templates.
+    range_map
+        Maps from a template name to a range defining values for that template.
+    trials
+        How many random trials to run.
+
+    Returns
+    -------
+    List[str]
+        A list of command strings, of length `trials`.
+    """
+    ordered_range_map = collections.OrderedDict(range_map)
+    sobol_values = sobol_seq.i4_sobol_generate(len(range_map), trials)
+
+    def transform_vector(uniform_vector):
+        substitution = {}
+        for uniform_sample, (name, rng) in zip(
+            uniform_vector, ordered_range_map.items()
+        ):
+            substitution[name] = rng.transform_uniform_sample(uniform_sample)
+        return substitution
+
+    command_strings = []
+    for uniform_vector in sobol_values:
+        substitution = transform_vector(uniform_vector)
+        command_string = apply_substitutions(templated_string, substitution)
+        command_strings.append(command_string)
+
+    return command_strings
 
 
 def grid(

@@ -74,6 +74,27 @@ class Range(abc.ABC):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        """
+        Transform a sample from a unit uniform distribution into a sample from this
+        distribution.
+
+        Sampling many values from Uniform[0, 1] and passing them to this function should
+        yield an identical distribution to random_sample().
+
+        Parameters
+        ----------
+        uniform_sample
+            A sample from the uniform distribution, in range [0, 1].
+
+        Returns
+        -------
+        str
+            A value to be substituted into the command in place of a bracketed template.
+        """
+        raise NotImplementedError
+
 
 class IntRange(Range):
     """
@@ -91,6 +112,11 @@ class IntRange(Range):
         divisions = min(divisions, self.max_value - self.min_value + 1)
         space = np.linspace(self.min_value, self.max_value, num=divisions, dtype=int)
         return list(map(str, space))
+
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        dynamic_range = self.max_value + 1 - self.min_value
+        float_value = uniform_sample * dynamic_range + self.min_value
+        return str(int(float_value))
 
 
 class LogIntRange(Range):
@@ -112,6 +138,13 @@ class LogIntRange(Range):
         space = np.geomspace(self.min_value, self.max_value, num=divisions, dtype=int)
         return list(map(str, space))
 
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        log_min = np.log(self.min_value)
+        log_max = np.log(self.max_value)
+        log_range = log_max - log_min
+        float_value = np.exp(log_range * uniform_sample + log_min)
+        return str(int(float_value))
+
 
 class FloatRange(Range):
     """
@@ -128,6 +161,11 @@ class FloatRange(Range):
     def grid(self, divisions: int) -> List[str]:
         space = np.linspace(self.min_value, self.max_value, num=divisions, dtype=float)
         return list(map(str, space))
+
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        dynamic_range = self.max_value - self.min_value
+        value = uniform_sample * dynamic_range + self.min_value
+        return str(value)
 
 
 class LogFloatRange(Range):
@@ -147,6 +185,13 @@ class LogFloatRange(Range):
         space = np.geomspace(self.min_value, self.max_value, num=divisions, dtype=float)
         return list(map(str, space))
 
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        log_min = np.log(self.min_value)
+        log_max = np.log(self.max_value)
+        log_range = log_max - log_min
+        value = np.exp(log_range * uniform_sample + log_min)
+        return str(value)
+
 
 class CategoricalRange(Range):
     """
@@ -164,6 +209,14 @@ class CategoricalRange(Range):
 
     def grid(self, divisions: int) -> List[str]:
         return self.categories
+
+    def transform_uniform_sample(self, uniform_sample: float) -> str:
+        chunk_size = 1 / len(self.categories)
+        for i, category in enumerate(self.categories):
+            if i * chunk_size <= uniform_sample < (i + 1) * chunk_size:
+                return category
+
+        assert False
 
 
 class TemplateRange(argparse.Action):
