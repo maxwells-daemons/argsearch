@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "argsearch"
-version = "0.2.1"
+version = "0.2.2"
 description = "Run a command many times with different combinations of its inputs."
 authors = ["Aidan Swope <aidanswope@gmail.com>"]
 maintainers = ["Aidan Swope <aidanswope@gmail.com>"]
@@ -23,6 +23,7 @@ include = [
 python = "^3.6"
 numpy = "^1.19.1"
 tqdm = "^4.49.0"
+scipy = "^1.5.2"
 
 [tool.poetry.dev-dependencies]
 
