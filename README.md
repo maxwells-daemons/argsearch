@@ -16,19 +16,19 @@ Key features include:
 ### Basic usage
 ```
 $ argsearch grid 3 "echo {a} {b}" --a 1 10 --b X Y
---- [0] echo 1 X
+--- [0: {'a': '1', 'b': 'X'}] echo 1 X
 1 X
---- [1] echo 5 X
-5 X
---- [2] echo 10 X
-10 X
---- [3] echo 1 Y
+--- [1: {'a': '1', 'b': 'Y'}] echo 1 Y
 1 Y
---- [4] echo 5 Y
+--- [2: {'a': '5', 'b': 'X'}] echo 5 X
+5 X
+--- [3: {'a': '5', 'b': 'Y'}] echo 5 Y
 5 Y
---- [5] echo 10 Y
-10 Y
-100%|██████████████████████████████| 6/6 [00:00<00:00, 220.49it/s]
+--- [4: {'a': '10', 'b': 'X'}] echo 10 X
+10 X
+--- [5: {'a': '10', 'b': 'Y'}] echo 10 Y
+10 Y  
+100%|██████████████████████████████| 6/6 [00:00<00:00, 184.31it/s]
 ```
 ### Composing pipelines with `argsearch` and `jq`
 ```
@@ -37,6 +37,7 @@ $ argsearch --output-json repeat 2 "echo hello" | jq
   {
     "step": 0,
     "command": "echo hello",
+    "substitutions": {},
     "stdout": "hello\n",
     "stderr": "",
     "returncode": 0
@@ -44,6 +45,7 @@ $ argsearch --output-json repeat 2 "echo hello" | jq
   {
     "step": 1,
     "command": "echo hello",
+    "substitutions": {},
     "stdout": "hello\n",
     "stderr": "",
     "returncode": 0
@@ -63,16 +65,16 @@ $ argsearch --output-json random 5 "echo {x}" --x LOG 1e-3 1e3 | jq -j '.[] | .s
 ### Black-box optimization
 ```
 $ argsearch maximize 13 "echo {a}" --a 1 1000  | tail
---- [8] echo 249
-249
---- [9] echo 116
-116
---- [10] echo 999
-999
---- [11] echo 1000
+--- [9: {'a': '45'}] echo 45
+45
+--- [10: {'a': '984'}] echo 984
+984
+--- [11: {'a': '1000'}] echo 1000
 1000
---- [12] echo 1000
+--- [12: {'a': '1000'}] echo 1000
 1000
+=== Best value found: 1000.0
+=== Best setting: {'a': '1000'}
 ```
 
 ## Installation
