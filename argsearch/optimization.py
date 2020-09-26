@@ -21,7 +21,12 @@ warnings.filterwarnings(
 
 def get_command_output(output: str) -> float:
     lines = output.strip().split("\n")
-    return float(lines[-1])
+    try:
+        return float(lines[-1])
+    except ValueError:
+        raise ValueError(
+            f"Command's last line of output must be a single number. Got: {lines[-1]}."
+        )
 
 
 def optimize_command(
@@ -52,64 +57,70 @@ def optimize_command(
         packed_command_args = []
         for i, args in enumerate(args_list):
             substitutions = dict(zip(template_names, map(str, args)))
-            command_string = strategies.apply_substitutions(
-                command_template, substitutions
+            packed_command_args.append(
+                (command_template, substitutions, step + i, None)
             )
-            packed_command_args.append((command_string, step + i, None))
 
-        return process_pool.imap_unordered(
-            commands._capture_command_packed, packed_command_args
-        )
+        return process_pool.imap(commands._capture_command_packed, packed_command_args)
 
     best_objective = None
+    best_setting = None
     steps_since_improvement = 0
 
-    with tqdm(total=trials, disable=disable_bar) as monitor:
-        if output_json:
-            outputs = []
+    try:
+        with tqdm(total=trials, disable=disable_bar) as monitor:
+            if output_json:
+                outputs = []
 
-        for step in range(0, trials, num_workers):
-            args_list = optimizer.ask(num_workers)
-            objective_values = []
+            for step in range(0, trials, num_workers):
+                args_list = optimizer.ask(num_workers)
+                objective_values = []
 
-            for output in eval_commands(args_list, step):
-                try:
+                for output in eval_commands(args_list, step):
                     objective = get_command_output(output["stdout"])
-                except ValueError:
-                    raise ValueError(
-                        "Command's last line of output must be a single number."
+
+                    if maximize:
+                        objective *= -1
+
+                    objective_values.append(objective)
+
+                    if output_json:
+                        outputs.append(output)
+                    else:
+                        header = commands.format_header(
+                            output["step"], output["command"], output["substitutions"]
+                        )
+                        output_with_header = f'{header}\n{output["stdout"]}'
+                        monitor.write(output_with_header, end="")
+                        if output["stderr"]:
+                            sys.stderr.write(output["stderr"])
+                            sys.stderr.flush()
+
+                    if best_objective is None or best_objective > objective:
+                        best_objective = objective
+                        best_setting = output["substitutions"]
+                        steps_since_improvement = 0
+                    else:
+                        steps_since_improvement += 1
+
+                    monitor.set_postfix(
+                        {"steps since improvement": steps_since_improvement}
                     )
+                    monitor.update()
 
-                if maximize:
-                    objective *= -1
-                objective_values.append(objective)
+                optimizer.tell(args_list, objective_values)
 
-                if output_json:
-                    outputs.append(output)
-                else:
-                    header = commands.format_header(output["step"], output["command"])
-                    output_with_header = f'{header}\n{output["stdout"]}'
-                    monitor.write(output_with_header, end="")
-                    if output["stderr"]:
-                        sys.stderr.write(output["stderr"])
-                        sys.stderr.flush()
+    except KeyboardInterrupt:
+        pass
 
-                if best_objective is None or best_objective > min(objective_values):
-                    best_objective = min(objective_values)
-                    steps_since_improvement = 0
-                else:
-                    steps_since_improvement += 1
+    monitor.clear()
+    monitor.close()
 
-                monitor.set_postfix(
-                    {
-                        "Current best": str(best_objective),
-                        "Steps since improvement": str(steps_since_improvement),
-                    }
-                )
-                monitor.update()
-
-            optimizer.tell(args_list, objective_values)
-
-        if output_json:
-            formatted = json.dumps(outputs)
-            monitor.write(formatted)
+    if output_json:
+        formatted = json.dumps(outputs)
+        monitor.write(formatted)
+    else:
+        if maximize:
+            best_objective *= -1  # type: ignore
+        monitor.write(f"=== Best value found: {best_objective}",)
+        monitor.write(f"=== Best setting: {best_setting}",)

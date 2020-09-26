@@ -10,25 +10,57 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tqdm import tqdm
 
+from argsearch import strategies
 
-def format_header(step: int, command: str):
+
+def format_header(step: int, command: str, substitutions: Dict[str, str]):
+    if substitutions:
+        return f"--- [{step}: {substitutions}] {command}"
     return f"--- [{step}] {command}"
 
 
-def stream_command(command: str, step: int, monitor: tqdm) -> None:
+def apply_substitutions(command: str, substitutions: Dict[str, str]) -> str:
     """
-    Run a command string, streaming output to the stdout.
+    Given a command string (with templates) and a substitution mapping, produce a
+    concrete command string that can be run in a shell.
 
     Parameters
     ----------
     command
-        The command string to run. Tokenized with the shell defaults.
+        A string to be executed as a subprocess, with "{arg}" bracketed templates.
+    substitutions
+        Maps from a bracketed template name to a value to substitute.
+
+    Returns
+    -------
+    str
+        A command string, containing `substitutions` plugged into templates in
+        `command`, that can be run in a shell.
+    """
+    for template, value in substitutions.items():
+        command = command.replace("{" + template + "}", value)
+    return command
+
+
+def stream_command(
+    command_template: str, substitutions: Dict[str, str], step: int, monitor: tqdm
+) -> None:
+    """
+    Run a command string, streaming output to stdout.
+
+    Parameters
+    ----------
+    command_template
+        A string to be executed as a subprocess, with "{arg}" bracketed templates.
+    substitutions
+        A set of substitutions to apply to the command template.
     step
         Which step of the search we're on.
     monitor
         A handle to the parent progress bar.
     """
-    monitor.write(format_header(step, command))
+    command = apply_substitutions(command_template, substitutions)
+    monitor.write(format_header(step, command, substitutions))
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, encoding="utf-8",
     )
@@ -40,14 +72,21 @@ def stream_command(command: str, step: int, monitor: tqdm) -> None:
     process.wait()
 
 
-def capture_command(command: str, step: int, monitor: Optional[tqdm]) -> Dict[str, Any]:
+def capture_command(
+    command_template: str,
+    substitutions: Dict[str, str],
+    step: int,
+    monitor: Optional[tqdm],
+) -> Dict[str, Any]:
     """
     Run a command string, capturing and formatting any output.
 
     Parameters
     ----------
-    command
-        The command string to run. Tokenized with the shell defaults.
+    command_template
+        A string to be executed as a subprocess, with "{arg}" bracketed templates.
+    substitutions
+        A set of substitutions to apply to the command template.
     step
         Which step of the search we're on.
     monitor
@@ -58,6 +97,7 @@ def capture_command(command: str, step: int, monitor: Optional[tqdm]) -> Dict[st
     Dict[str, str]
         The results of evaluating the command with substitution.
     """
+    command = apply_substitutions(command_template, substitutions)
     if monitor:
         monitor.set_description(command)
     command_result = subprocess.run(
@@ -71,18 +111,22 @@ def capture_command(command: str, step: int, monitor: Optional[tqdm]) -> Dict[st
     return {
         "step": step,
         "command": command,
+        "substitutions": substitutions,
         "stdout": command_result.stdout,
         "stderr": command_result.stderr,
         "returncode": command_result.returncode,
     }
 
 
-def _capture_command_packed(args: Tuple[str, int, tqdm]) -> Dict[str, Any]:
+def _capture_command_packed(
+    args: Tuple[str, Dict[str, str], int, tqdm]
+) -> Dict[str, Any]:
     return capture_command(*args)
 
 
 def run_commands(
-    command_strings: List[str],
+    command_template: str,
+    substitution_list: List[Dict[str, str]],
     output_json: bool = False,
     num_workers: int = 0,
     disable_bar: bool = False,
@@ -92,8 +136,10 @@ def run_commands(
 
     Parameters
     ----------
-    command_strings
-        All command strings to run.
+    command_template
+        A string to be executed as a subprocess, with "{arg}" bracketed templates.
+    substitution_list
+        A list of substitution sets to apply to the command template.
     output_json
         If True, collect output and print at the end, formatted as json.
         Otherwise (default), stream output to stdout as it arrives.
@@ -107,26 +153,34 @@ def run_commands(
             num_workers, initializer=tqdm.set_lock, initargs=(tqdm.get_lock(),)
         )
 
-        with tqdm(total=len(command_strings), disable=disable_bar) as monitor:
-            args_packed = [(comm, i, None) for i, comm in enumerate(command_strings)]
+        with tqdm(total=len(substitution_list), disable=disable_bar) as monitor:
+            args_packed = [
+                (command_template, subs, i, None)
+                for i, subs in enumerate(substitution_list)
+            ]
 
             if output_json:
                 outputs = []
 
-            for output in process_pool.imap_unordered(
-                _capture_command_packed, args_packed
-            ):
-                monitor.update()
+            try:
+                for output in process_pool.imap_unordered(
+                    _capture_command_packed, args_packed
+                ):
+                    monitor.update()
 
-                if output_json:
-                    outputs.append(output)
-                else:
-                    header = format_header(output["step"], output["command"])
-                    output_with_header = f'{header}\n{output["stdout"]}'
-                    monitor.write(output_with_header, end="")
-                    if output["stderr"]:
-                        sys.stderr.write(output["stderr"])
-                        sys.stderr.flush()
+                    if output_json:
+                        outputs.append(output)
+                    else:
+                        header = format_header(
+                            output["step"], output["command"], output["substitutions"]
+                        )
+                        output_with_header = f'{header}\n{output["stdout"]}'
+                        monitor.write(output_with_header, end="")
+                        if output["stderr"]:
+                            sys.stderr.write(output["stderr"])
+                            sys.stderr.flush()
+            except KeyboardInterrupt:
+                pass
 
             if output_json:
                 formatted = json.dumps(outputs)
@@ -134,14 +188,20 @@ def run_commands(
 
         return
 
-    with tqdm(command_strings, disable=disable_bar) as monitor:
+    with tqdm(substitution_list, disable=disable_bar) as monitor:
         if output_json:
-            outputs = [
-                capture_command(command, step, monitor)
-                for step, command in enumerate(monitor)
-            ]
+            outputs = []
+
+            try:
+                for step, substitutions in enumerate(monitor):
+                    outputs.append(
+                        capture_command(command_template, substitutions, step, monitor)
+                    )
+            except KeyboardInterrupt:
+                pass
+
             formatted = json.dumps(outputs)
             monitor.write(formatted)
         else:
-            for step, command in enumerate(monitor):
-                stream_command(command, step, monitor)
+            for step, substitutions in enumerate(monitor):
+                stream_command(command_template, substitutions, step, monitor)

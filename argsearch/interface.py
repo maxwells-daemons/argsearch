@@ -209,24 +209,19 @@ def main():
         return
 
     if base_args.strategy == "random":
-        command_strings = strategies.random(
-            base_args.command, parsed_ranges, base_args.trials
-        )
+        substitutions = strategies.random(parsed_ranges, base_args.trials)
     elif base_args.strategy == "quasirandom":
-        command_strings = strategies.sobol(
-            base_args.command, parsed_ranges, base_args.trials
-        )
+        substitutions = strategies.sobol(parsed_ranges, base_args.trials)
     elif base_args.strategy == "grid":
-        command_strings = strategies.grid(
-            base_args.command, parsed_ranges, base_args.divisions
-        )
+        substitutions = strategies.grid(parsed_ranges, base_args.divisions)
     elif base_args.strategy == "repeat":
-        command_strings = strategies.repeat(base_args.command, base_args.repeats)
+        substitutions = [{}] * base_args.repeats
     else:
         raise ValueError(f"Unrecognized strategy: {base_args.strategy}.")
 
     commands.run_commands(
-        command_strings,
+        base_args.command,
+        substitutions,
         base_args.output_json,
         base_args.num_workers,
         base_args.disable_bar,
