@@ -1,13 +1,26 @@
 # argsearch
-`argsearch` is a simple and composable tool for sweeping over the arguments of another program.
-It aims to easily automate tasks like hyperparameter tuning and setting simulation parameters, while only requiring that your program accepts command-line arguments in some form.
+`argsearch` is the easiest parameter searcher you'll ever use. It lets you run random searches, grid sweeps, and even Bayesian maximization or minimization without writing any code, by _reusing your program's command-line interface._
 
-Key features include:
- - Easy integration with any program that takes command-line arguments.
- - Support for searching over integer, floating-point, and categorical arguments with several search strategies.
- - Smart search algorithms, including Bayesian optimization and low-discrepancy random search.
- - The ability to produce JSON-structured output, making it composable with other command-line tools like [`jq`](https://stedolan.github.io/jq/).
- - Multiprocessing, enabling running many experiments in parallel.
+If you call a program like
+```
+my_program --my_input 10 
+```
+then running
+```
+argsearch grid 100 'my_program --my_input {input}' --input 1 100
+```
+will automatically run `my_program` 100 times, with `my_input` ranging from 1 to 100, and log each run's output to stdout. If `my_program` prints a number before it terminates, then running
+```
+argsearch maximize 20 'my_program --my_input {input}' --input 1 100
+```
+will use Bayesian black-box optimization to try to find the input (from 1 to 100) that maximizes the output value.
+
+`argsearch` can:
+ - Run many experiments in parallel — just use the `--num-workers` flag.
+ - Search over integer, floating-point, and categorical arguments.
+ - Take input and output on the command-line (including JSON-structured output with `--output-json`), making it composable with other command-line tools like [`jq`](https://stedolan.github.io/jq/).
+ 
+ Under the hood, `argsearch` just does string replacement and invokes your shell, making it dead-simple to understand and trivially compatible with any program that takes input on the command line, while giving you access to powerful search strategies.
  
 ![MIT license badge](https://img.shields.io/github/license/maxwells-daemons/argsearch)
 ![Python version badge](https://img.shields.io/pypi/pyversions/argsearch)
