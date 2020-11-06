@@ -7,13 +7,13 @@ my_program --my_input 10
 ```
 then running
 ```
-argsearch grid 100 'my_program --my_input {input}' --input 1 100
+argsearch grid 100 'my_program --my_input {input}' --input 1 50
 ```
-will automatically run `my_program` 100 times, with `my_input` ranging from 1 to 100, and log each run's output to stdout. If `my_program` prints a number before it terminates, then running
+will automatically run `my_program` 100 times, with `my_input` ranging from 1 to 50, and log each run's output to stdout. If `my_program` prints a number before it terminates, then running
 ```
-argsearch maximize 20 'my_program --my_input {input}' --input 1 100
+argsearch maximize 20 'my_program --my_input {input}' --input 1 50
 ```
-will use Bayesian black-box optimization to try to find the input (from 1 to 100) that maximizes the output value.
+will use Bayesian black-box optimization to try to find the input (from 1 to 50, with 20 trials) that maximizes the output value.
 
 `argsearch` can:
  - Run many experiments in parallel — just use the `--num-workers` flag.
